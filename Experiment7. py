@@ -1,0 +1,60 @@
+# EXPERIMENT 7: Dimensionality Reduction on Adult Income Dataset
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+
+# 1. Load dataset
+df = pd.read_csv('adult.csv')
+print("Dataset loaded successfully!")
+
+# Add column names if missing
+if df.shape[1] == 15 and 'age' not in df.columns:
+    df.columns = ['age', 'workclass', 'fnlwgt', 'education', 'education-num',
+                  'marital-status', 'occupation', 'relationship', 'race', 'sex',
+                  'capital-gain', 'capital-loss', 'hours-per-week', 'native-country', 'income']
+
+# 2. Preprocessing
+# Remove missing or unknown values
+df = df.replace('?', np.nan).dropna()
+
+# Encode categorical columns
+le = LabelEncoder()
+for col in df.select_dtypes('object').columns:
+    df[col] = le.fit_transform(df[col])
+
+# Separate features and target
+X = df.drop('income', axis=1)
+y = df['income']
+
+# Split and scale
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# 3. Baseline model (without reduction)
+rf = RandomForestClassifier(random_state=42)
+rf.fit(X_train_scaled, y_train)
+baseline_acc = accuracy_score(y_test, rf.predict(X_test_scaled))
+print(f"Baseline Accuracy (No Reduction): {baseline_acc:.4f}")
+
+# 4. PCA (Unsupervised)
+pca = PCA(n_components=5)
+X_train_pca = pca.fit_transform(X_train_scaled)
+X_test_pca = pca.transform(X_test_scaled)
+rf.fit(X_train_pca, y_train)
+pca_acc = accuracy_score(y_test, rf.predict(X_test_pca))
+print(f"PCA Accuracy (5 Components): {pca_acc:.4f}")
+
+# 5. LDA (Supervised)
+lda = LDA(n_components=1)
+X_train_lda = lda.fit_transform(X_train_scaled, y_train)
+X_test_lda = lda.transform(X_test_scaled)
+rf.fit(X_train_lda, y_train)
+lda_acc = accuracy_score(y_test, rf.predict(X_test_lda))
+print(f"LDA Accuracy (1 Component): {lda_acc:.4f}")
